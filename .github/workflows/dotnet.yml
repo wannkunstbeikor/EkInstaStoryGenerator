@@ -27,7 +27,7 @@ jobs:
       env:
         USERNAME: ${{ secrets.INSTAGRAM_USERNAME }}
         PASSWORD: ${{ secrets.INSTAGRAM_PASSWORD }}
-      run: ./publish/EkInstaStoryGenerator results
+      run: ./publish/EkInstaStoryGenerator gameday
 
     
     
