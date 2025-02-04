@@ -29,7 +29,7 @@ public class Match
     public Team GuestTeam { get; set; }
 
     [JsonPropertyName("result")]
-    public string Result { get; set; }
+    public string? Result { get; set; }
 
     [JsonPropertyName("ergebnisbestaetigt")]
     public bool? Ergebnisbestaetigt { get; set; }

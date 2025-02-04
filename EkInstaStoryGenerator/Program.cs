@@ -12,7 +12,6 @@ using InstagramApiSharp.API.Builder;
 using InstagramApiSharp.Classes;
 using InstagramApiSharp.Classes.Models;
 using InstagramApiSharp.Enums;
-using InstagramApiSharp.Logger;
 using SixLabors.Fonts;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.Drawing.Processing;
@@ -28,7 +27,7 @@ class Program
     private static Dictionary<DateTime, List<(string EkTeam, string OpTeam, bool IsHomeGame, bool Fuck, string Time)>> gameDays = new();
 
     private static readonly string request =
-        "https://www.basketball-bund.net/rest/club/id/886/actualmatches?justHome=false&rangeDays=6";
+        "https://www.basketball-bund.net/rest/club/id/886/actualmatches?justHome=false&rangeDays=3";
 
     private static Brush brushWhite = Brushes.Solid(Color.WhiteSmoke);
     private static Brush brushBlack = Brushes.Solid(Color.Black);
@@ -62,39 +61,65 @@ class Program
     
     static async Task Main(string[] args)
     {
-        if (args.Length != 1)
+        if (args.Length > 1)
         {
-            Console.WriteLine("Usage: EkInstaStoryGenerator <type>");
+            Console.WriteLine("Usage: EkInstaStoryGenerator [-results]");
             return;
         }
 
         await LoadAsync();
 
-        if (args[0] == "gameday")
+        if (args.Length == 0)
         {
-            await Render("SPIELTAG", gameDays);
+            var data = gameDays.Where(d => d.Key - DateTime.Today <= TimeSpan.FromDays(2))
+                .ToDictionary(x => x.Key, x => x.Value);
+            if (data.Count == 0)
+            {
+                return;
+            }
+            await Render("SPIELTAG", data);
         }
-        else if (args[0] == "results")
+        else if (args[0] == "-results")
         {
-            await Render("ERGEBNISSE", gameDayResults);
+            var data = gameDayResults.Where(d => DateTime.Today - d.Key <= TimeSpan.FromDays(2))
+                .ToDictionary(x => x.Key, x => x.Value);
+            if (data.Count == 0)
+            {
+                return;
+            }
+            await Render("ERGEBNISSE", data);
         }
         else
         {
             return;
         }
+
+        FileInfo info = new(Path.Combine(AppContext.BaseDirectory, "user.json"));
+        if (!info.Exists)
+        {
+            Console.WriteLine("No user.json");
+            return;
+        }
         
-        UserSessionData userSession = new() { UserName = Environment.GetEnvironmentVariable("USERNAME"), Password = Environment.GetEnvironmentVariable("PASSWORD") };
+        var user = await JsonSerializer.DeserializeAsync(info.OpenRead(), SourceGenerationContext.Default.User);
+        
+        if (user is null)
+        {
+            Console.WriteLine("Wrong format for user.json");
+            return;
+        }
+        
+        UserSessionData userSession = new() { UserName = user.UserName, Password = user.Password };
         
         var delay = RequestDelay.FromSeconds(2, 2);
         var instaApi = InstaApiBuilder.CreateBuilder()
             .SetUser(userSession)
-            .UseLogger(new DebugLogger(LogLevel.All)) // use logger for requests and debug messages
             .SetRequestDelay(delay)
             .Build();
         
         instaApi.SetApiVersion(InstaApiVersionType.Version261);
         
-        const string stateFile = "state.bin";
+        string stateFile = Path.Combine(AppContext.BaseDirectory, "state.bin");
         try
         {
             if (File.Exists(stateFile))
@@ -171,7 +196,7 @@ class Program
         }
 
         var responseBody = await response.Content.ReadAsStringAsync();
-        ApiResponse<ClubData>? c = JsonSerializer.Deserialize<ApiResponse<ClubData>>(responseBody);
+        ApiResponse<ClubData>? c = JsonSerializer.Deserialize(responseBody, SourceGenerationContext.Default.ApiResponseClubData);
         if (c is null)
         {
             // TODO: show some error
@@ -195,7 +220,7 @@ class Program
             {
                 gameDayResults.TryAdd(gameTime, new());
 
-                string result = match.Result;
+                string? result = match.Result;
                 if (string.IsNullOrEmpty(result))
                 {
                     result = "-:-";
