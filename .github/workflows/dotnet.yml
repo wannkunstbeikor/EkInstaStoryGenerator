@@ -20,14 +20,20 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: 8.0.x
-    - name: Build
+    - name: Build 64 bit
       run: dotnet publish -o publish-arm64 -c Release --runtime linux-arm64 --self-contained /p:DebugType=None /p:DebugSymbols=false
-
-    - name: Upload
+    - name: Build 32 bit
+      run: dotnet publish -o publish-arm32 -c Release --runtime linux-arm --self-contained /p:DebugType=None /p:DebugSymbols=false
+    - name: Upload 64 bit
       uses: actions/upload-artifact@v4.3.0
       with: 
-        name: ekisg-linux-x64
+        name: ekisg-linux-arm64
         path: publish-arm64
+    - name: Upload 32 bit
+      uses: actions/upload-artifact@v4.3.0
+      with: 
+        name: ekisg-linux-arm32
+        path: publish-arm32
 
     
     
