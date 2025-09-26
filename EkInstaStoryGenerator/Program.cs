@@ -254,7 +254,7 @@ class Program
                     n = 1;
                 }
 
-                return ($"H{n}", true);
+                return (ligaData.Geschlecht == "weiblich" ? $"D{n}" : $"H{n}", true);
             }
 
             string extra = string.Empty;
